@@ -1,0 +1,79 @@
+[1mdiff --git a/index.js b/index.js[m
+[1mindex f7e45be..f7091a9 100644[m
+[1m--- a/index.js[m
+[1m+++ b/index.js[m
+[36m@@ -1,7 +1,8 @@[m
+ require('dotenv').config();[m
+[31m-const express = require('express');[m
+[32m+[m[32mconst app = require('express');[m
+ const cors = require('cors');[m
+[31m-const app = express();[m
+[32m+[m[32mconst mongoose = require('mongoose');[m
+[32m+[m[32mconst validUrl = require('valid-url');[m
+ [m
+ // Basic Configuration[m
+ const port = process.env.PORT || 3000;[m
+[36m@@ -19,6 +20,63 @@[m [mapp.get('/api/hello', function(req, res) {[m
+   res.json({ greeting: 'hello API' });[m
+ });[m
+ [m
+[32m+[m
+[32m+[m[32m// shorturl  URL[m
+[32m+[m[32mdotenv.config();[m
+[32m+[m
+[32m+[m[32mconst app = express();[m
+[32m+[m
+[32m+[m[32m// Body Parser Middleware[m
+[32m+[m[32mapp.use(bodyParser.urlencoded({ extended: false }));[m
+[32m+[m[32mapp.use(bodyParser.json());[m
+[32m+[m
+[32m+[m[32m// Connect to MongoDB[m
+[32m+[m[32mmongoose.connect(process.env.MONGO_URI, {[m
+[32m+[m[32m  useNewUrlParser: true,[m
+[32m+[m[32m  useUnifiedTopology: true[m
+[32m+[m[32m}).then(() => console.log('MongoDB connected...'))[m
+[32m+[m[32m  .catch(err => console.log(err));[m
+[32m+[m
+[32m+[m[32m// Shorten URL[m
+[32m+[m[32mapp.post('/api/shorturl', async (req, res) => {[m
+[32m+[m[32m  const { original_url , shortUrl_url  } = req.body;[m
+[32m+[m
+[32m+[m[32m  if (!validUrl.isUri(original_url)) {[m
+[32m+[m[32m    return res.json({ error: 'invalid url' });[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    // Check if the short URL already exists[m
+[32m+[m[32m    let url = await Url.findOne({ shortUrl });[m
+[32m+[m[32m    if (url) {[m
+[32m+[m[32m      return res.json({ original_url: url.originalUrl, short_url: url.shortUrl });[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Create a new URL entry[m
+[32m+[m[32m    url = new Url({ originalUrl, shortUrl });[m
+[32m+[m[32m    await url.save();[m
+[32m+[m[32m    res.json({ original_url: originalUrl, short_url: shortUrl });[m
+[32m+[m[32m  } catch (err) {[m
+[32m+[m[32m    console.error(err);[m
+[32m+[m[32m    res.status(500).json('Server error');[m
+[32m+[m[32m  }[m
+[32m+[m[32m});[m
+[32m+[m
+[32m+[m[32m// Redirect to the original URL[m
+[32m+[m[32mapp.get('/api/shorturl/:shortUrl', async (req, res) => {[m
+[32m+[m[32m  try {[m
+[32m+[m[32m    const url = await Url.findOne({ shortUrl: req.params.shortUrl });[m
+[32m+[m[32m    if (url) {[m
+[32m+[m[32m      return res.redirect(url.originalUrl);[m
+[32m+[m[32m    } else {[m
+[32m+[m[32m      return res.status(404).json({ error: 'No URL found' });[m
+[32m+[m[32m    }[m
+[32m+[m[32m  } catch (err) {[m
+[32m+[m[32m    console.error(err);[m
+[32m+[m[32m    res.status(500).json('Server error');[m
+[32m+[m[32m  }[m
+[32m+[m[32m});[m
+[32m+[m
+ app.listen(port, function() {[m
+   console.log(`Listening on port ${port}`);[m
+ });[m
